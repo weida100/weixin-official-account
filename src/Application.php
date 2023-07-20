@@ -1,11 +1,14 @@
 <?php
 declare(strict_types=1);
 
+namespace Weida\WeixinOfficialAccount;
 /**
  * Author: Weida
  * Date: 2023/7/19 23:48
  * Email: weida_dev@163.com
  */
+
+use Psr\Http\Message\ResponseInterface;
 use Weida\WeixinCore\AbstractApplication;
 use Weida\WeixinCore\Account;
 use Weida\WeixinCore\Contract\AccountInterface;
@@ -25,6 +28,14 @@ class Application extends AbstractApplication
             );
         }
         return $this->account;
+    }
+
+    public function getResponse(): ResponseInterface
+    {
+        // TODO: Implement getResponse() method.
+    }
+    public function getServer():ResponseInterface{
+        return $this->getResponse();
     }
 
     public function getEncryptor(): Encoder
