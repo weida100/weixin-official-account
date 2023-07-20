@@ -9,13 +9,30 @@ declare(strict_types=1);
 
 namespace Weida\WeixinOfficialAccount;
 
+use \GuzzleHttp\Psr7\Response as Psr7Response;
+use \Psr\Http\Message\ResponseInterface as PsrResponseInterface;
+use Weida\WeixinCore\Contract\RequestInterface;
+use Weida\WeixinCore\Contract\ResponseInterface;
+use Weida\WeixinCore\Encoder;
 
-use Psr\Http\Message\ResponseInterface;
-
-class Response implements ResponseInterface
+class Response extends Psr7Response implements ResponseInterface
 {
+    protected RequestInterface $request;
+    protected Encoder $encoder;
+    protected array $handlers=[];
 
-    public function serve():ResponseInterface{
+    public function __construct(RequestInterface $request,Encoder $encoder)
+    {
+        $this->request = $request;
+        $this->encoder = $encoder;
+        parent::__construct();
+    }
+
+    public function serve():PsrResponseInterface{
+        return $this;
+    }
+
+    public function with(callable $callback):static{
         return $this;
     }
 

@@ -8,14 +8,15 @@ namespace Weida\WeixinOfficialAccount;
  * Email: weida_dev@163.com
  */
 
-use Psr\Http\Message\ResponseInterface;
+use GuzzleHttp\Psr7\HttpFactory;
 use Weida\WeixinCore\AbstractApplication;
 use Weida\WeixinCore\Account;
 use Weida\WeixinCore\Contract\AccountInterface;
 use Weida\WeixinCore\Encoder;
-
+use Weida\WeixinCore\Contract\ResponseInterface;
 class Application extends AbstractApplication
 {
+    protected ?ResponseInterface $response=null;
 
     public function getAccount(): AccountInterface
     {
@@ -30,11 +31,17 @@ class Application extends AbstractApplication
         return $this->account;
     }
 
-    public function getResponse(): ResponseInterface
+    public function getResponse():ResponseInterface
     {
-        // TODO: Implement getResponse() method.
+        if(empty($this->response)){
+            $this->response = new Response(
+                $this->getRequest(),
+                $this->getEncryptor()
+            );
+        }
+        return $this->response;
     }
-    public function getServer():ResponseInterface{
+    public function getServer():Response{
         return $this->getResponse();
     }
 
