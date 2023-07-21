@@ -8,16 +8,22 @@ namespace Weida\WeixinOfficialAccount;
  * Email: weida_dev@163.com
  */
 
-use GuzzleHttp\Psr7\HttpFactory;
 use Weida\WeixinCore\AbstractApplication;
 use Weida\WeixinCore\Account;
 use Weida\WeixinCore\Contract\AccountInterface;
+use Weida\WeixinCore\Contract\EncryptorInterface;
 use Weida\WeixinCore\Encoder;
 use Weida\WeixinCore\Contract\ResponseInterface;
+use Weida\WeixinCore\Encryptor;
+
 class Application extends AbstractApplication
 {
     protected ?ResponseInterface $response=null;
 
+    /**
+     * @return AccountInterface
+     * @author Sgenmi
+     */
     public function getAccount(): AccountInterface
     {
         if (!$this->account){
@@ -31,6 +37,10 @@ class Application extends AbstractApplication
         return $this->account;
     }
 
+    /**
+     * @return ResponseInterface
+     * @author Sgenmi
+     */
     public function getResponse():ResponseInterface
     {
         if(empty($this->response)){
@@ -45,9 +55,21 @@ class Application extends AbstractApplication
         return $this->getResponse();
     }
 
-    public function getEncryptor(): Encoder
+    /**
+     * @return EncryptorInterface
+     * @author Sgenmi
+     */
+    public function getEncryptor(): EncryptorInterface
     {
-        // TODO: Implement getEncryptor() method.
+        if(empty($this->encryptor)){
+            $this->encryptor = new Encryptor(
+                $this->getAccount()->getAppId(),
+                $this->getAccount()->getToken(),
+                $this->getAccount()->getAesKey(),
+                $this->getAccount()->getAppId()
+            );
+        }
+        return $this->encryptor;
     }
 
 }
