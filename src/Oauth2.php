@@ -8,6 +8,8 @@ declare(strict_types=1);
 
 namespace Weida\WeixinOfficialAccount;
 
+ use Weida\WeixinCore\Contract\HttpClientInterface;
+
  class Oauth2
 {
     private string $clientId;
@@ -16,8 +18,12 @@ namespace Weida\WeixinOfficialAccount;
     private string $componentAppid='';
     private string|array $scope="";
     private string $state="";
-
-    public function __construct(string $clientId,string $clientSecret,string $redirectUri='',string $scope='snsapi_base')
+    private ?HttpClientInterface $httpClient=null;
+    private User $user;
+    public function __construct(
+        string $clientId,string $clientSecret,string $redirectUri='',string|array $scope='snsapi_base',
+        ?HttpClientInterface $httpClient=null
+    )
     {
         $this->clientId = $clientId;
         $this->clientSecret = $clientSecret;
@@ -55,14 +61,14 @@ namespace Weida\WeixinOfficialAccount;
         return $this;
     }
 
-    /**
-     * 为后面weida/oauth2-core/interface做准备,
-     * 各平台oauth2一个类继承公共abstract implements Oauth2interface
-     *
-     * @param string $redirect_uri
-     * @return string
-     * @author Weida
-     */
+     /**
+      * 为后面weida/oauth2-core/interface做准备,
+      * 各平台oauth2一个类继承公共abstract implements Oauth2interface
+      *
+      * @param string $redirectUri
+      * @return string
+      * @author Weida
+      */
     public function redirect(string $redirectUri=''):string{
         $params=[
             'appid'=>$this->clientId,
@@ -79,5 +85,93 @@ namespace Weida\WeixinOfficialAccount;
             http_build_query(array_filter($params)));
         return $url;
     }
+
+    //以下为了兼容
+
+     public function withRedirectUrl(string $redirectUri=''):static{
+        $this->redirectUri = $this->redirectUri;
+        return $this;
+     }
+
+     public function withState(string $state): static
+     {
+         $this->state = $state;
+         return $this;
+     }
+     public function scopes(array $scopes): static
+     {
+         $this->scopes = $scopes;
+         return $this;
+     }
+
+     protected function getAccessToken($code):string{
+        $params=[
+            'query'=>[
+                'appid'=>$this->clientId,
+                'secret'=>$this->clientSecret,
+                'code'=>$code,
+                'grant_type'=>'authorization_code'
+            ]
+        ];
+        $resp = $this->httpClient->request('GET','/sns/oauth2/access_token',$params);
+        $resp = $this->httpClient->request($method, $apiUrl,$params);
+        if($resp->getStatusCode()!=200){
+         throw new RuntimeException('Request oauth2 access_token exception');
+        }
+        $arr = json_decode($resp->getBody()->getContents(),true);
+
+        if (empty($arr['access_token'])) {
+         throw new RuntimeException('Failed to get access_token: ' . json_encode($arr, JSON_UNESCAPED_UNICODE));
+        }
+        $this->getUser()->setAccessToken($arr['access_token']);
+        $this->getUser()->setAttribute('open_id',$arr['open_id']??'');
+        return $arr['access_token'];
+     }
+
+     /**
+      * @param string $token
+      * @return User
+      * @throws \Throwable
+      * @author Weida
+      */
+     public function userFromToken(string $token):User{
+         $params=[
+             'query'=>[
+                 'access_token'=>$token,
+                 'openid'=>$this->getUser()->getOpenId(),
+                 'lang'=>'zh_CN'
+             ]
+         ];
+         $resp = $this->httpClient->request('GET','/sns/userinfo',$params);
+         if($resp->getStatusCode()!=200){
+             throw new RuntimeException('Request sns/userinfo exception');
+         }
+         $arr = json_decode($resp->getBody()->getContents(),true);
+         if (empty($arr['openid'])) {
+             throw new RuntimeException('Failed to get userinfo: ' . json_encode($arr, JSON_UNESCAPED_UNICODE));
+         }
+         $this->getUser()->setAttributes($arr);
+         return $this->getUser();
+     }
+
+     /**
+      * @return User
+      * @author Weida
+      */
+     protected function getUser():User{
+        if(empty($this->user)){
+            $this->user =  new User();
+        }
+        return $this->user;
+     }
+     /**
+      * @param string $code
+      * @return User
+      * @author Weida
+      */
+     public function userFromCode(string $code):User{
+        $token = $this->getAccessToken($code);
+        return $this->userFromToken($token);
+     }
 
 }
