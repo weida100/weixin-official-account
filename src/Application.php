@@ -27,8 +27,9 @@ class Application extends AbstractApplication
             $this->oauth2 = new Oauth2(
               $this->getAccount()->getAppId(),
                 $this->getAccount()->getSecret(),
-                $this->getConfig()->get('redirect_uri'),
-                $this->getConfig()->get('scope','snsapi_base'),
+                $this->getConfig()->get('oauth.redirect_uri'),
+                $this->getConfig()->get('oauth.scope','snsapi_base'),
+                $this->getHttpClient()
             );
         }
         return $this->oauth2;
