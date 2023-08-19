@@ -8,170 +8,117 @@ declare(strict_types=1);
 
 namespace Weida\WeixinOfficialAccount;
 
- use Weida\WeixinCore\Contract\HttpClientInterface;
+ use GuzzleHttp\Exception\GuzzleException;
+ use RuntimeException;
+ use Weida\Oauth2Core\AbstractApplication;
+ use Weida\Oauth2Core\Contract\UserInterface;
+ use Weida\Oauth2Core\User;
 
- class Oauth2
+ class Oauth2 extends AbstractApplication
 {
-    private string $clientId;
-    private string $clientSecret;
-    private string $redirectUri;
-    private string $componentAppid='';
-    private string|array $scope="";
-    private string $state="";
-    private ?HttpClientInterface $httpClient=null;
-    private User $user;
-    public function __construct(
-        string $clientId,string $clientSecret,string $redirectUri='',string|array $scope='snsapi_base',
-        ?HttpClientInterface $httpClient=null
-    )
-    {
-        $this->clientId = $clientId;
-        $this->clientSecret = $clientSecret;
-        $this->redirectUri=$redirectUri;
-        $this->scope = $scope;
-    }
-
-     /**
-      * @param string|array $scope
-      * @return $this
-      * @author Weida
-      */
-    public function setScope(string|array $scope):static{
-        $this->scope = $scope;
-        return $this;
-    }
-
-     /**
-      * @param string $state
-      * @return $this
-      * @author Weida
-      */
-    public function setState(string $state):static{
-        $this->state = $state;
-        return $this;
-    }
+     protected array $scopes=['snsapi_base','snsapi_userinfo'];
+     protected string $openid="";
 
     /**
-     * 设置第三方平台网页授权
-     * @return $this
+     * @return string
      * @author Weida
      */
-    public function setComponentAppid(string $appid):static{
-        $this->componentAppid = $appid;
-        return $this;
-    }
-
-     /**
-      * 为后面weida/oauth2-core/interface做准备,
-      * 各平台oauth2一个类继承公共abstract implements Oauth2interface
-      *
-      * @param string $redirectUri
-      * @return string
-      * @author Weida
-      */
-    public function redirect(string $redirectUri=''):string{
-        $params=[
-            'appid'=>$this->clientId,
-            'redirect_uri'=>!empty($redirectUri) ?$redirectUri:$this->redirectUri,
-            'response_type'=>'code',
-            'scope'=>is_array($this->scope)?implode(',',$this->scope):$this->scope,
-            'state'=>$this->state,
-            'component_appid'=>$this->componentAppid
-        ];
-        if(empty($params['redirect_uri'])){
-            throw new \RuntimeException("redirect_uri is empty");
-        }
-        $url = sprintf("https://open.weixin.qq.com/connect/oauth2/authorize?%s#wechat_redirect",
-            http_build_query(array_filter($params)));
-        return $url;
-    }
-
-    //以下为了兼容
-
-     public function withRedirectUrl(string $redirectUri=''):static{
-        $this->redirectUri = $this->redirectUri;
-        return $this;
-     }
-
-     public function withState(string $state): static
+     protected function getAuthUrl(): string
      {
-         $this->state = $state;
-         return $this;
-     }
-     public function scopes(array $scopes): static
-     {
-         $this->scopes = $scopes;
-         return $this;
-     }
-
-     protected function getAccessToken($code):string{
-        $params=[
-            'query'=>[
-                'appid'=>$this->clientId,
-                'secret'=>$this->clientSecret,
-                'code'=>$code,
-                'grant_type'=>'authorization_code'
-            ]
-        ];
-        $resp = $this->httpClient->request('GET','/sns/oauth2/access_token',$params);
-        $resp = $this->httpClient->request($method, $apiUrl,$params);
-        if($resp->getStatusCode()!=200){
-         throw new RuntimeException('Request oauth2 access_token exception');
-        }
-        $arr = json_decode($resp->getBody()->getContents(),true);
-
-        if (empty($arr['access_token'])) {
-         throw new RuntimeException('Failed to get access_token: ' . json_encode($arr, JSON_UNESCAPED_UNICODE));
-        }
-        $this->getUser()->setAccessToken($arr['access_token']);
-        $this->getUser()->setAttribute('open_id',$arr['open_id']??'');
-        return $arr['access_token'];
-     }
-
-     /**
-      * @param string $token
-      * @return User
-      * @throws \Throwable
-      * @author Weida
-      */
-     public function userFromToken(string $token):User{
          $params=[
-             'query'=>[
-                 'access_token'=>$token,
-                 'openid'=>$this->getUser()->getOpenId(),
-                 'lang'=>'zh_CN'
-             ]
+             'appid'=>$this->getConfig()->get('client_id'),
+             'redirect_uri'=>$this->getConfig()->get('redirect'),
+             'response_type'=>'code',
+             'scope'=>implode(',',$this->scopes),
+             'state'=> $this->state,
          ];
-         $resp = $this->httpClient->request('GET','/sns/userinfo',$params);
+         //开放平台 登录网站
+         if($params['scope']=='snsapi_login'){
+             return sprintf('https://open.weixin.qq.com/connect/qrconnect?%s#wechat_redirect',http_build_query($params));
+         }
+         return sprintf('https://open.weixin.qq.com/connect/oauth2/authorize?%s#wechat_redirect',http_build_query($params));
+     }
+
+    /**
+     * @param string $code
+     * @return string
+     * @author Weida
+     */
+     protected function getTokenUrl(string $code): string
+     {
+         $component_appid = $this->getConfig()->get('component_appid','');
+         if(!empty($component_appid)){
+             $params=[
+                 'appid'=>$this->getConfig()->get('client_id'),
+                 'code'=>$code,
+                 'grant_type'=>'authorization_code',
+                 'component_appid'=>$component_appid,
+                 'component_access_token'=>$this->getConfig()->get('component_access_token'),
+             ];
+             return 'https://api.weixin.qq.com/sns/oauth2/component/access_token?'.http_build_query($params);
+         }else{
+             $params=[
+                 'appid'=>$this->getConfig()->get('client_id'),
+                 'secret'=>$this->getConfig()->get('client_secret'),
+                 'code'=>$code,
+                 'grant_type'=>'authorization_code'
+             ];
+             return 'https://api.weixin.qq.com/sns/oauth2/access_token?'.http_build_query($params);
+         }
+     }
+
+    /**
+     * @param string $accessToken
+     * @return string
+     * @author Weida
+     */
+     protected function getUserInfoUrl(string $accessToken): string
+     {
+         $params=[
+             'access_token'=>$accessToken,
+             'openid'=>$this->openid,
+             'lang'=>'zh_CN'
+         ];
+         return 'https://api.weixin.qq.com/sns/userinfo?'.http_build_query($params);
+     }
+
+     /**
+      * @param string $accessToken
+      * @return UserInterface
+      * @throws GuzzleException
+      * @author Weida
+      */
+     public function userFromToken(string $accessToken): UserInterface
+     {
+         $url = $this->getUserInfoUrl($accessToken);
+         $resp = $this->getHttpClient()->request('GET',$url);
          if($resp->getStatusCode()!=200){
-             throw new RuntimeException('Request sns/userinfo exception');
+             throw new RuntimeException('Request userinfo exception');
          }
          $arr = json_decode($resp->getBody()->getContents(),true);
          if (empty($arr['openid'])) {
              throw new RuntimeException('Failed to get userinfo: ' . json_encode($arr, JSON_UNESCAPED_UNICODE));
          }
-         $this->getUser()->setAttributes($arr);
-         return $this->getUser();
+         return new User([
+             'uid'=>$arr['openid'],
+             'nickname'=>$arr['nickname'],
+             'headimgurl'=>$arr['avatar'],
+             'unionid'=>$arr['unionid']??'',
+         ]);
      }
 
-     /**
-      * @return User
-      * @author Weida
-      */
-     protected function getUser():User{
-        if(empty($this->user)){
-            $this->user =  new User();
-        }
-        return $this->user;
-     }
      /**
       * @param string $code
-      * @return User
-      * @author Weida
+      * @return UserInterface
+      * @throws GuzzleException
+      * @author Sgenmi
       */
-     public function userFromCode(string $code):User{
-        $token = $this->getAccessToken($code);
-        return $this->userFromToken($token);
+     public function userFromCode(string $code): UserInterface
+     {
+         $tokenArr = $this->tokenFromCode($code);
+         if(!empty($tokenArr['openid'])){
+             $this->openid = $tokenArr['openid'];
+         }
+         return $this->userFromToken($tokenArr['access_token']);
      }
-
-}
+ }
