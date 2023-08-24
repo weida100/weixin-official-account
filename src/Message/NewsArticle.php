@@ -8,9 +8,10 @@ declare(strict_types=1);
 
 namespace Weida\WeixinOfficialAccount\Message;
 
+use Weida\WeixinCore\Contract\MessageInterface;
 use Weida\WeixinCore\Message;
 
-class NewsArticle
+class NewsArticle implements MessageInterface
 {
     private array $attributes=[];
     public function __construct(string $article_id)
@@ -23,7 +24,7 @@ class NewsArticle
         $this->attributes['article_id'] = strval($attributes);
     }
 
-    public function geAttributes(): array
+    public function getAttributes(): array
     {
         return [
             'msgtype'=>Message::TYPE_MPNEWSARTICLE,

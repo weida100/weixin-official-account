@@ -36,7 +36,7 @@ class Music implements MessageInterface
         $this->attributes = (array)$attributes;
     }
 
-    public function geAttributes(): array
+    public function getAttributes(): array
     {
         return [
             'msgtype'=>Message::TYPE_MUSIC,

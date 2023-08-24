@@ -24,7 +24,7 @@ class Card implements MessageInterface
         $this->attributes['card_id'] = strval($attributes);
     }
 
-    public function geAttributes(): array
+    public function getAttributes(): array
     {
         return [
             'msgtype'=>Message::TYPE_WXCARD,

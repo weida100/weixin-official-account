@@ -24,7 +24,7 @@ class Voice implements MessageInterface
         $this->attributes['media_id'] = strval($attributes);
     }
 
-    public function geAttributes(): array
+    public function getAttributes(): array
     {
         return [
             'msgtype'=>Message::TYPE_VOICE,

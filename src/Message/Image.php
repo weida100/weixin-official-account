@@ -19,12 +19,12 @@ class Image implements MessageInterface
         $this->attributes['media_id'] = $media_id;
     }
 
-    public function setAttributes(mixed $attributes): void
+    public function setAttributes(array|string $attributes): void
     {
         $this->attributes['media_id'] = strval($attributes);
     }
 
-    public function geAttributes(): array
+    public function getAttributes(): array
     {
         return [
             'msgtype'=>Message::TYPE_IMAGE,

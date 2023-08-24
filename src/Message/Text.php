@@ -13,7 +13,7 @@ use Weida\WeixinCore\Message;
 class Text implements MessageInterface
 {
     private array $attributes=[];
-    public function __construct(string $content='')
+    public function __construct(string $content)
     {
         $this->attributes['content'] = $content;
     }
@@ -23,7 +23,7 @@ class Text implements MessageInterface
         $this->attributes['content'] = strval($attributes);
     }
 
-    public function geAttributes(): array
+    public function getAttributes(): array
     {
        return [
            'msgtype'=>Message::TYPE_TEXT,

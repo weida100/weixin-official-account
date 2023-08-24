@@ -37,7 +37,7 @@ class News implements MessageInterface
         $this->attributes = (array)$attributes;
     }
 
-    public function geAttributes(): array
+    public function getAttributes(): array
     {
         $items =[];
         foreach ($this->attributes  as $v){
