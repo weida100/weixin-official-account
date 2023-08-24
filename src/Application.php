@@ -5,15 +5,33 @@ namespace Weida\WeixinOfficialAccount;
 /**
  * Author: Weida
  * Date: 2023/7/19 23:48
- * Email: weida_dev@163.com
+ * Email: sgenmi@gmail.com
  */
 
 use Weida\WeixinCore\AbstractApplication;
+use Weida\WeixinCore\Contract\ResponseInterface;
 
 class Application extends AbstractApplication
 {
     protected string $appType='officialAccount';
     protected Oauth2 $oauth2;
+
+    /**
+     * @return ResponseInterface
+     * @author Weida
+     */
+    public function getResponse():ResponseInterface
+    {
+        if(empty($this->response)){
+            $this->response = new Response(
+                $this->getRequest(),
+                $this->getEncryptor(),
+                $this->getAppType() //用来区别事件
+            );
+        }
+        $this->getResponseAfter();
+        return $this->response;
+    }
 
     /**
      * @return Oauth2
