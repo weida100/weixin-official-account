@@ -20,8 +20,7 @@ class Response extends AbstractResponse
      */
     public function serve():ResponseInterface{
         if (!empty($this->params['echostr'])) {
-            $this->withBody($this->params['echostr']);
-            return $this;
+            return $this->sendBody($this->params['echostr']);
         }
         $message = $this->getDecryptedMessage();
         $response = $this->middleware->handler($this,$message);
@@ -41,7 +40,7 @@ class Response extends AbstractResponse
                 $response = new Message($response->getAttributes());
             }
             $content = $response->toXmlReply($message,$this->encryptor);
-            $this->withBody($content);
+            return $this->sendBody($content);
         }
         return $this;
     }
