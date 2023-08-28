@@ -10,11 +10,13 @@ namespace Weida\WeixinOfficialAccount;
 
 use Weida\WeixinCore\AbstractApplication;
 use Weida\WeixinCore\Contract\ResponseInterface;
+use Weida\WeixinOfficialAccount\JsSdk\Js;
 
 class Application extends AbstractApplication
 {
     protected string $appType='officialAccount';
     protected Oauth2 $oauth2;
+    protected ?Js $jsSdk=null;
 
     /**
      * @return ResponseInterface
@@ -52,6 +54,17 @@ class Application extends AbstractApplication
             $this->oauth2->setHttpClient($this->getHttpClient());
         }
         return $this->oauth2;
+    }
+
+    /**
+     * @return Js
+     * @author Sgenmi
+     */
+    public function getJsSdk():Js{
+        if(empty($this->jsSdk)){
+            $this->jsSdk = new Js($this->getAccount()->getAppId(),$this->getCache(),$this->getClient());
+        }
+        return $this->jsSdk;
     }
 
 }
