@@ -132,6 +132,30 @@ class Ticket
         ];
     }
 
+    /**
+     * @param string $ticketType
+     * @return $this
+     * @author Weida
+     */
+    public function setType(string $ticketType):static {
+        $this->ticketType = $ticketType;
+        return $this;
+    }
+
+    /**
+     * @return string
+     * @author Weida
+     */
+    public function getType():string {
+        return $this->ticketType;
+    }
+
+    /**
+     * @param string $url
+     * @return array
+     * @throws Throwable
+     * @author Weida
+     */
     public function getSignature(string $url):array {
         $time = time();
         $nonce = md5(session_create_id());
@@ -144,5 +168,87 @@ class Ticket
                 'jsapi_ticket=%s&noncestr=%s&timestamp=%s&url=%s', $this->getTicket(), $nonce, $time, $url)),
         ];
     }
+
+    /**
+     * cardExt本身是一个JSON字符串，是商户为该张卡券分配的唯一性信息
+     * 将 api_ticket、timestamp、card_id、code、openid、nonce_str的value值进行字符串的字典序排序
+     * 将所有参数字符串拼接成一个字符串进行sha1加密，得到signature
+     * @param string $cardId
+     * @param string $code
+     * @param string $openId
+     * @param string $outerStr
+     * @param string $fixedBeginTimestamp
+     * @return string
+     * @throws Throwable
+     * @author Weida
+     */
+    public function getCardExt(
+        string $cardId='',string $code='', string $openId='',string $outerStr='',string $fixedBeginTimestamp=''
+    ):string{
+        $time = time();
+        $nonce = md5(session_create_id());
+        return json_encode( [
+            'card_id'=>$cardId,
+            'code'=>$code,
+            'openid'=>$openId,
+            'timestamp'=>$time,
+            'nonce_str'=>$nonce,
+            'fixed_begintimestamp'=>$fixedBeginTimestamp,
+            'outer_str'=>$outerStr,
+            'signature'=>$this->getCardSignature([
+                'card_id' => $cardId,
+                'code'=>$code,
+                'openid'=>$openId,
+                'nonceStr' => $nonce,
+                'timestamp' => $time
+            ])
+        ],JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
+     * api_ticket、appid、location_id、timestamp、nonce_str、card_id、card_type的value值进行字符串的字典序排序。
+     * 将所有参数字符串拼接成一个字符串进行sha1加密，得到cardSign。
+     * @param string $cardId
+     * @param string $cardType
+     * @param string $locationId
+     * @return string[]
+     * @throws Throwable
+     * @author Weida
+     */
+    public function getCardSign(string $cardId='',string $cardType='',string $locationId=''):array{
+        $time = time();
+        $nonce = md5(session_create_id());
+        return [
+            'cardId'=> $cardId,
+            'timestamp'=>$time,
+            'nonceStr'=>$nonce,
+            'signType'=>'SHA1',
+            'cardSign'=>$this->getCardSignature([
+                'appid'=>$this->appId,
+                'location_id'=>$locationId,
+                'timestamp'=>$time,
+                'nonce_str'=>$nonce,
+                'card_id'=>$cardId,
+                'card_type'=>$cardType
+            ])
+        ];
+    }
+
+    /**
+     * @param array $params
+     * @return string
+     * @throws Throwable
+     * @author Weida
+     */
+    public function getCardSignature(array $params):string{
+        if($this->ticketType!='wx_card'){
+            throw new InvalidArgumentException("invalid ticket type ");
+        }
+        $params['api_ticket'] = $this->getTicket();
+        $params= array_filter($params);
+        sort($params);
+        return sha1(implode('',$params));
+    }
+
 
 }

@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace Weida\WeixinOfficialAccount\JsSdk;
 
 use Psr\SimpleCache\CacheInterface;
+use Throwable;
 use Weida\WeixinCore\Contract\WithAccessTokenClientInterface;
 
 class Js
@@ -28,20 +29,55 @@ class Js
     /**
      * @param string $url
      * @param array $jsApiList
-     * @param array $menuList
+     * @param array $openTagList
      * @param bool $debug
      * @return array
+     * @throws Throwable
      * @author Weida
      */
-    public function buildConfig(string $url, array $jsApiList = [], array $menuList = [], bool $debug = false):array{
+    public function buildConfig(string $url, array $jsApiList = [], array $openTagList = [], bool $debug = false):array{
        return array_merge( [
             'debug'=>$debug,
             'appId'=>$this->appid,
             'jsApiList'=>$jsApiList,
-            'menuList'=>$menuList,
+            'openTagList'=>$openTagList,
         ],
-        $this->jsTicket->getSignature($url)
+        $this->getJsTicket()->getSignature($url)
        );
+    }
+
+    /**
+     * @param string $cardId
+     * @param string $code
+     * @param string $openId
+     * @param string $outerStr
+     * @param string $fixedBeginTimestamp
+     * @return string
+     * @throws Throwable
+     * @author Weida
+     */
+    public function buildCardExt(
+        string $cardId='',string $code='', string $openId='',string $outerStr='',string $fixedBeginTimestamp=''):string{
+        $this->setType('wx_card');
+        return $this->getJsTicket()->getCardExt($cardId,$code,$openId,$outerStr,$fixedBeginTimestamp);
+    }
+
+    /**
+     * @param string $shopId
+     * @param string $cardId
+     * @param string $cardType
+     * @param string $locationId
+     * @return string[]
+     * @throws Throwable
+     * @author Weida
+     */
+    public function buildCardConfig(string $shopId='',string $cardId='',string $cardType='',string $locationId=''):array{
+        $this->setType('wx_card');
+        return array_merge([
+                'shopId'=>$shopId,
+                'cardType'=>$cardType,
+            ], $this->getJsTicket()->getCardSign($cardId, $cardType, $locationId)
+        );
     }
 
     /**
@@ -70,6 +106,24 @@ class Js
     public function setJsTicket(Ticket $ticket):static {
         $this->jsTicket = $ticket;
         return $this;
+    }
+
+    /**
+     * @param string $ticketType
+     * @return $this
+     * @author Weida
+     */
+    public function setType(string $ticketType):static {
+        $this->getJsTicket()->setType($ticketType);
+        return $this;
+    }
+
+    /**
+     * @return string
+     * @author Weida
+     */
+    public function getType():string {
+        return $this->getJsTicket()->getType();
     }
 
 }
