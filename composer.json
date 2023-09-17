@@ -11,5 +11,9 @@
             "email": "sgenmi@gmail.com"
         }
     ],
-    "require": {}
+    "require": {
+        "php": ">=8.0",
+        "weida/weixin-core": "^0.0.1",
+        "weida/oauth2-core": "^0.0.1"
+    }
 }
